@@ -1,2 +1,2 @@
-# GeoMapping_Unity
+# Geomipmapping_Unity
 Terrain LOD 
