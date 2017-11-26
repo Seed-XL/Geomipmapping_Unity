@@ -3,11 +3,11 @@ using Assets.Scripts.Common;
 using Assets.Scripts.Utility;
 using System.Collections.Generic; 
 
-namespace Assets.Scripts.GeoMapping
+namespace Assets.Scripts.Geomipmapping
 {
 
 
-    class CGeoMappingTerrain
+    class CGeomipmappingTerrain
     {
 
         #region   核心逻辑

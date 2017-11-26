@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using Assets.Scripts.GeoMapping;
+using Assets.Scripts.Geomipmapping;
 using Assets.Scripts.Common; 
 
 
@@ -61,7 +61,7 @@ public class DemoFramework : MonoBehaviour {
 
 
 
-    private CGeoMappingTerrain mGeoMappingTerrain;
+    private CGeomipmappingTerrain mGeoMappingTerrain;
 
 
 
@@ -81,7 +81,7 @@ public class DemoFramework : MonoBehaviour {
         InitMeshData();
         InitRenderMode(); 
     
-        mGeoMappingTerrain = new CGeoMappingTerrain();
+        mGeoMappingTerrain = new CGeomipmappingTerrain();
         //制造高度图
         mGeoMappingTerrain.MakeTerrainFault(heightSize, iterations, (ushort)minHeightValue, (ushort)maxHeightValue, filter);
 
