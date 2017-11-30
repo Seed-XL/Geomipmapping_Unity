@@ -736,7 +736,35 @@ namespace Assets.Scripts.Geomipmapping
 
 
         #endregion
-  
+
+        #region Patch相关操作
+        private int mPatchSize;
+        private List<stGeommPatchData> mGeommPatchs = new List<stGeommPatchData>(); 
+        private int mNumPatchesPerSize
+        {
+            get
+            {
+                return mHeightData.mSize / mPatchSize; 
+            }
+        }
+
+
+        /// <summary>
+        /// 每条边有多少个顶点
+        /// </summary>
+        /// <param name="oneSideVertexPerPatch"></param>
+        public void GeneratePatchs( int vertexPerPatch )
+        {
+            if( vertexPerPatch > 0 
+                && mHeightData.IsValid() )
+            {
+                mPatchSize = vertexPerPatch; 
+
+            }
+        }
+       
+
+        #endregion
 
     }
 }

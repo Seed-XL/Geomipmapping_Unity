@@ -275,4 +275,132 @@ namespace Assets.Scripts.Common
 
     #endregion
 
+    #region 结点定义
+    struct stGeommPatchData 
+    {
+        public float mDistance;
+        public int mLOD;
+        private int mPatchXIndex;
+        private int mPatchZIndex;
+
+        private GameObject mPatchGo; 
+        public Mesh mMesh;
+        public Vector3[] mVertices;
+        public Vector2[] mUV;
+        public Vector3[] mNormals;
+        public int[] mTriangles;
+
+
+        private int mTriIdx;
+        private int mPatchsPerSide;
+        private int mPatchSize;
+        private int mHeightMapSize;
+
+        public stGeommPatchData(
+            int x, 
+            int z,
+            int patchSize ,
+            int patchsPerSide,
+            int heightMapSize,
+            int initLOD,
+            GameObject prefab
+            )
+        {
+            mPatchXIndex = x;
+            mPatchZIndex = z;
+            mPatchSize = patchSize; 
+            mPatchsPerSide = patchsPerSide;
+            mHeightMapSize = heightMapSize; 
+            mTriIdx = 0;
+            mLOD = initLOD;
+            mDistance = 0.0f; 
+
+            Vector3 patchPos = new Vector3(x, 0, z);
+
+            mPatchGo = GameObject.Instantiate(prefab, patchPos, Quaternion.identity) as GameObject; 
+            if( mPatchGo != null )
+            {
+                //1、生成Mesh
+                //2、生成材质   
+                //3、生成纹理  
+            }
+
+
+            mMesh = new Mesh();
+            mVertices = null;
+            mNormals = null;
+            mUV = null; 
+            mTriangles = null; 
+
+        }   
+
+        public void RenderVertex(
+            int idx,
+            Vector3 vertex,
+            Vector3 uv
+            )
+        {
+            mVertices[idx] = vertex;
+            mUV[idx] = uv;
+            mTriangles[mTriIdx++] = idx;
+        }
+
+
+        public void RenderTriangle(
+            stVertexAtrribute a,
+            stVertexAtrribute b,
+            stVertexAtrribute c
+                        )
+        {
+            RenderVertex(a.mVerticeIdx, a.mVertice, a.mUV);
+            RenderVertex(b.mVerticeIdx, b.mVertice, b.mUV);
+            RenderVertex(c.mVerticeIdx, c.mVertice, c.mUV);
+        }
+
+
+        public void Present()
+        {
+            if (mMesh != null)
+            {
+                mMesh.vertices = mVertices;
+                mMesh.uv = mUV;
+                mMesh.triangles = mTriangles;
+                mMesh.normals = mNormals;
+            }
+        }
+
+
+        public void Reset()
+        {
+            if (mVertices != null)
+            {
+                for (int i = 0; i < mVertices.Length; ++i)
+                {
+                    mVertices[i].x = mVertices[i].y = mVertices[i].z = 0;
+                    if (mUV != null)
+                    {
+                        mUV[i].x = mUV[i].y = 0;
+                    }
+                    if (mNormals != null)
+                    {
+                        mNormals[i].x = mNormals[i].y = 0;
+                    }
+                }
+            }
+
+            mTriIdx = 0;
+            if (mTriangles != null)
+            {
+                for (int i = 0; i < mTriangles.Length; ++i)
+                {
+                    mTriangles[i] = 0;
+                }
+            }
+
+        }
+
+    }
+
+    #endregion
+
 }
