@@ -738,6 +738,7 @@ namespace Assets.Scripts.Geomipmapping
         #endregion
 
         #region Patch相关操作
+        private int mMaxLOD;
         private int mPatchSize;
         private List<stGeommPatchData> mGeommPatchs = new List<stGeommPatchData>(); 
         private int mNumPatchesPerSize
@@ -753,13 +754,24 @@ namespace Assets.Scripts.Geomipmapping
         /// 每条边有多少个顶点
         /// </summary>
         /// <param name="oneSideVertexPerPatch"></param>
-        public void GeneratePatchs( int vertexPerPatch )
+        public void ConfigGeommaping( int vertexPerPatch )
         {
             if( vertexPerPatch > 0 
                 && mHeightData.IsValid() )
             {
-                mPatchSize = vertexPerPatch; 
+                mPatchSize = vertexPerPatch;
 
+                int tDivisor = vertexPerPatch - 1;
+                int tLOD = 0; 
+                while( tDivisor > 2  )
+                {
+                    tDivisor = tDivisor >> 1;
+                    tLOD++; 
+                }
+
+                mMaxLOD = tLOD; 
+
+                   
             }
         }
        
