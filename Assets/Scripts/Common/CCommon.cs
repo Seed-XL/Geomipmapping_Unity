@@ -276,12 +276,28 @@ namespace Assets.Scripts.Common
     #endregion
 
     #region 结点定义
-    struct stGeommPatchData 
+    class CGeommPatch 
     {
         public float mDistance;
         public int mLOD;
         private int mPatchXIndex;
-        private int mPatchZIndex;
+        public int PatchX
+        {
+            get
+            {
+                return mPatchXIndex;
+            } 
+        }
+
+        private int mPatchZIndex; 
+        public int PatchZ
+        {
+            get
+            {
+                return mPatchZIndex; 
+            }
+        }
+
 
         private GameObject mPatchGo; 
         public Mesh mMesh;
@@ -296,18 +312,46 @@ namespace Assets.Scripts.Common
         private int mPatchSize;
         private int mHeightMapSize;
 
-        public stGeommPatchData(
-            int x, 
-            int z,
-            int patchSize ,
+
+        public bool mbDrawLeft;
+        public bool mbDrawTop;
+        public bool mbDrawRight;
+        public bool mbDrawBottom; 
+
+        //没有Scale过的顶点
+        public float RawCenterX
+        {
+            get
+            {
+                return mPatchXIndex * mPatchSize + ((float)mPatchSize / 2.0f);
+            }
+        }
+
+        public float RawCenterZ
+        {
+            get
+            {
+                return mPatchZIndex * mPatchSize + ((float)mPatchSize / 2.0f);
+            }
+        }
+
+
+
+        public CGeommPatch(
+            int patchX, 
+            int patchZ,
+            int patchSize ,  //奇数
             int patchsPerSide,
             int heightMapSize,
             int initLOD,
             GameObject prefab
             )
         {
-            mPatchXIndex = x;
-            mPatchZIndex = z;
+            //Patch的索引
+            mPatchXIndex = patchX;
+            mPatchZIndex = patchZ;
+
+
             mPatchSize = patchSize; 
             mPatchsPerSide = patchsPerSide;
             mHeightMapSize = heightMapSize; 
@@ -315,23 +359,53 @@ namespace Assets.Scripts.Common
             mLOD = initLOD;
             mDistance = 0.0f; 
 
-            Vector3 patchPos = new Vector3(x, 0, z);
+            Vector3 patchPos = new Vector3(patchX, 0, patchZ);
 
+            int vertexCnt = mPatchSize * mPatchSize;
+            int trianglesCnt = (mPatchSize - 1) * (mPatchSize - 1) * 6;
+
+            mVertices = new Vector3[vertexCnt];
+            mNormals = new Vector3[vertexCnt];
+            mUV = new Vector2[vertexCnt]; ;
+            mTriangles = new int[trianglesCnt];
+            mMesh = null;
+
+            //生成纹理之类的
             mPatchGo = GameObject.Instantiate(prefab, patchPos, Quaternion.identity) as GameObject; 
             if( mPatchGo != null )
             {
                 //1、生成Mesh
+                MeshFilter meshFilter = mPatchGo.GetComponent<MeshFilter>();
+                if (null == meshFilter)
+                {
+                    Debug.LogError("Terrain without Comp [MeshFilter]");
+                    return;
+                }
+
+                if (meshFilter.mesh == null)
+                {
+                    meshFilter.mesh = new Mesh();
+                }
+
                 //2、生成材质   
-                //3、生成纹理  
+                MeshRenderer meshRender = mPatchGo.GetComponent<MeshRenderer>();
+                if (meshRender != null)
+                {
+                    Shader terrainShader = Shader.Find("Terrain/QuadTree/TerrainRender");
+                    if (terrainShader != null)
+                    {
+                        meshRender.material = new Material(terrainShader);
+                        //if (meshRender.material != null)
+                        //{
+                        //    meshRender.material.SetTexture("_MainTex", texture);
+                        //    if (detailTexture != null)
+                        //    {
+                        //        meshRender.material.SetTexture("_DetailTex", detailTexture);
+                        //    }
+                        //}
+                    }
+                }
             }
-
-
-            mMesh = new Mesh();
-            mVertices = null;
-            mNormals = null;
-            mUV = null; 
-            mTriangles = null; 
-
         }   
 
         public void RenderVertex(

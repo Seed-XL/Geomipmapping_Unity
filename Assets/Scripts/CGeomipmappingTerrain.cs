@@ -12,7 +12,7 @@ namespace Assets.Scripts.Geomipmapping
 
         #region   核心逻辑
 
-        private int GetIndex(int x, int z)
+        private int GetGlobalIndex(int x, int z)
         {
             return z * mHeightData.mSize + x;
         }
@@ -27,17 +27,6 @@ namespace Assets.Scripts.Geomipmapping
 
 
 
-        public void CLOD_Render(ref stTerrainMeshData meshData, Vector3 vertexScale)
-        {
-            meshData.Reset();
-            float fCenter = (mHeightData.mSize - 1) >> 1;
-
-            RenderNode(fCenter, fCenter, mHeightData.mSize, ref meshData, vertexScale);
-
-            meshData.Present();
-        }
-
-
         private Vector3 GetScaleVector3(float x, float z, Vector3 vectorScale)
         {
             return new Vector3(
@@ -49,25 +38,20 @@ namespace Assets.Scripts.Geomipmapping
 
 
         private stVertexAtrribute GenerateVertex(
-            int vertexX,
-            int vertexZ,
+            int vertexIdx,
             float fX,
             float fZ,
             float uvX, float uvZ, Vector3 vectorScale)
         {
             return new stVertexAtrribute(
-                 GetIndex(vertexX, vertexZ),
+                 vertexIdx,
                  GetScaleVector3(fX, fZ, vectorScale),
                  new Vector2(uvX, uvZ)
                 );
         }
 
 
-        private void RenderNode(float fX, float fZ, int curNodeLength, ref stTerrainMeshData meshData, Vector3 vectorScale)
-        {
-            
-
-        }  //RenderNode
+       
 
 
 
@@ -740,7 +724,7 @@ namespace Assets.Scripts.Geomipmapping
         #region Patch相关操作
         private int mMaxLOD;
         private int mPatchSize;
-        private List<stGeommPatchData> mGeommPatchs = new List<stGeommPatchData>(); 
+        private List<CGeommPatch> mGeommPatchs = new List<CGeommPatch>(); 
         private int mNumPatchesPerSize
         {
             get
@@ -754,7 +738,7 @@ namespace Assets.Scripts.Geomipmapping
         /// 每条边有多少个顶点
         /// </summary>
         /// <param name="oneSideVertexPerPatch"></param>
-        public void ConfigGeommaping( int vertexPerPatch )
+        public void ConfigGeommaping( int vertexPerPatch , GameObject patchPrefab)
         {
             if( vertexPerPatch > 0 
                 && mHeightData.IsValid() )
@@ -771,10 +755,250 @@ namespace Assets.Scripts.Geomipmapping
 
                 mMaxLOD = tLOD; 
 
-                   
+                  
+                for(int z = 0; z < mNumPatchesPerSize; z++ )
+                {
+                    for(int x = 0; x < mNumPatchesPerSize; x++)
+                    {
+                        CGeommPatch patch = new CGeommPatch(
+                            x,
+                            z,
+                            mPatchSize,
+                            mNumPatchesPerSize,
+                            mHeightData.mSize,
+                            mMaxLOD,
+                            patchPrefab
+                            );
+
+                        mGeommPatchs.Add(patch);
+                    }
+                }
+                 
+            }
+        }
+
+        public void CLOD_Render(Texture2D terrainTexture, Texture2D detailTexture, Vector3 vectorScale)
+        {
+            for (int z = 0; z < mNumPatchesPerSize; ++z)
+            {
+                for (int x = 0; x < mNumPatchesPerSize; ++x)
+                {
+                    CGeommPatch patch = GetPatch(x, z);
+                    if (null == patch)
+                    {
+                        continue;
+                    }
+
+                    int curPatchLOD = patch.mLOD;
+                    CGeommPatch leftNeighborPatch = GetPatch(x - 1, z);
+                    CGeommPatch topNeighborPatch = GetPatch(x, z + 1);
+                    CGeommPatch rightNeighborPatch = GetPatch(x + 1, z);
+                    CGeommPatch bottomNeighborPatch = GetPatch(x, z - 1);
+
+                    //需要画左边中间的点
+                    patch.mbDrawLeft = CanDrawMidVertex(curPatchLOD, leftNeighborPatch);
+                    patch.mbDrawTop = CanDrawMidVertex(curPatchLOD, topNeighborPatch);
+                    patch.mbDrawRight = CanDrawMidVertex(curPatchLOD, rightNeighborPatch);
+                    patch.mbDrawBottom = CanDrawMidVertex(curPatchLOD, bottomNeighborPatch);
+
+                    patch.Reset(); 
+                    RenderPatch(patch, terrainTexture, detailTexture, vectorScale); 
+                }
             }
         }
        
+
+        public void RenderPatch(CGeommPatch patch , Texture2D  terrainTexture , Texture2D detailTexture , Vector3 vectorScale )
+        {
+            if( null == patch )
+            {
+                return; 
+            }
+
+            float fSize = mPatchSize;
+            int iDivisor = mPatchSize - 1;
+            int tLOD = patch.mLOD;
+
+            while (tLOD >= 0)
+            {
+                iDivisor = iDivisor >> 1;
+                tLOD--; 
+            }
+
+            int patchVertexIdx = 0; 
+            fSize /= iDivisor;
+            float fHalfSize = fSize / 2.0f;
+            for (float z = -fHalfSize; ((int)z+fHalfSize) < mPatchSize+1; z+= fSize )
+            {
+                for (float x = -fHalfSize; ((int)x + fHalfSize) < mPatchSize + 1 ; x+=fSize )
+                {
+                    bool bDrawLeft = false;
+                    bool bDrawTop = false;
+                    bool bDrawRight = false;
+                    bool bDrawBottom = false; 
+
+                    //最左边的Fan
+                    if( x == -fHalfSize )
+                    {
+                        bDrawLeft = patch.mbDrawLeft;                           
+                    }
+                    else
+                    {
+                        bDrawLeft = true;   //如果是内部的Fan，即中点必须画 
+                    }
+
+                    if (z == fHalfSize)
+                    {
+                        bDrawTop = patch.mbDrawTop;
+                    }
+                    else
+                    {
+                        bDrawTop = true;   //如果是内部的Fan，即中点必须画 
+                    }
+
+
+                    if (x == fHalfSize)
+                    {
+                        bDrawRight = patch.mbDrawRight;
+                    }
+                    else
+                    {
+                        bDrawRight = true;   //如果是内部的Fan，即中点必须画 
+                    }
+
+
+                    if (z == -fHalfSize)
+                    {
+                        bDrawBottom = patch.mbDrawBottom;
+                    }
+                    else
+                    {
+                        bDrawBottom = true;   //如果是内部的Fan，即中点必须画 
+                    }
+
+                    RenderFan(ref patchVertexIdx,  x, z, fSize, bDrawLeft, bDrawTop, bDrawRight, bDrawBottom, patch, terrainTexture, detailTexture, vectorScale);
+                }
+            }
+        }
+
+        private void RenderFan( ref int vertexIdx, float x,float z,float fanSize, bool drawLeft,bool drawTop,bool drawRight,bool drawBottom,
+            CGeommPatch patch, Texture2D terrainTexture, Texture2D detailTexture, Vector3 vectorScale)
+        {
+            if( null == patch )
+            {
+                return; 
+            }
+
+            float fHalfSize = fanSize / 2.0f;
+            float fanCenterRawX = patch.RawCenterX + x;  //在高度图里面的位置
+            float fanCenterRawZ = patch.RawCenterZ + z;
+            float fanLeftRawX = fanCenterRawX - fHalfSize;
+            float fanRightRawX = fanCenterRawX + fHalfSize;
+            float fanTopRawZ = fanCenterRawZ + fHalfSize;
+            float fanBottomRawZ = fanCenterRawZ - fHalfSize; 
+            //float fanCenterX = fanCenterRawX * vectorScale.x;
+            //float fanCenterZ = fanCenterRawZ * vectorScale.z;
+            //float fanCenterY = mHeightData.GetRawHeightValue((int)fanCenterRawX, (int)fanCenterRawZ) * vectorScale.y;
+
+            float fTexLeft = ((float)Mathf.Abs(fanCenterRawX - fHalfSize) / mHeightData.mSize) ;
+            float fTexBottom = ((float)Mathf.Abs(fanCenterRawZ - fHalfSize) / mHeightData.mSize)  ;
+            float fTexRight = ((float)Mathf.Abs(fanCenterRawX + fHalfSize) / mHeightData.mSize)  ;
+            float fTexTop = ((float)Mathf.Abs(fanCenterRawZ + fHalfSize) / mHeightData.mSize)  ;
+
+            float fMidX = ((fTexLeft + fTexRight) / 2);
+            float fMidZ = ((fTexBottom + fTexTop) / 2);
+
+
+            stVertexAtrribute centerVertex = GenerateVertex(vertexIdx, fanCenterRawX, fanCenterRawZ, fMidX, fMidZ, vectorScale);
+        }
+
+
+        private bool CanDrawMidVertex( int lod , CGeommPatch neighborPatch  )
+        {
+            bool ret = false;
+            if( null == neighborPatch || neighborPatch.mLOD <= lod )
+            {
+                ret = true; 
+            }
+            return ret; 
+        }
+
+
+        public void UpdatePatch( Camera viewCamera, Vector3 vectorScale , List<float> lodLevels )
+        {
+            if (null == viewCamera)
+            {
+                Debug.LogError("[UpdatePatch]View Camera is Null!");
+                return ;
+            }
+
+            if( null == lodLevels || 0 == lodLevels.Count)
+            {
+                Debug.LogError("[UpdatePatch]LOD Levels is Null!");
+                return;
+            }
+
+
+            float fScalePatchSize = mPatchSize * vectorScale.x; 
+
+            for(int z = 0; z < mNumPatchesPerSize; z++)
+            {
+                for(int x = 0; x < mNumPatchesPerSize;x++)
+                {
+                    CGeommPatch patch = GetPatch(x, z);
+                    if( null == patch )
+                    {
+                        continue; 
+                    }
+
+                    float patchCenterX = patch.RawCenterX * vectorScale.x;
+                    float patchCenterZ = patch.RawCenterZ * vectorScale.z;
+                    float patchCenterY = mHeightData.GetRawHeightValue((int)patch.RawCenterX,(int)patch.RawCenterZ) * vectorScale.y;
+
+                    patch.mDistance = Mathf.Sqrt(
+                           Mathf.Pow(viewCamera.transform.position.x - patchCenterX, 2) +
+                           Mathf.Pow(viewCamera.transform.position.y - patchCenterY, 2) +
+                           Mathf.Pow(viewCamera.transform.position.z - patchCenterZ, 2)
+                            );
+
+
+                    patch.mLOD = mMaxLOD; 
+                    for(int i = 0; i < lodLevels.Count; ++i)
+                    {
+                        float lodDistance = lodLevels[i]; 
+                        if( patch.mDistance < lodDistance )
+                        {
+                            patch.mLOD = i;
+                            break; 
+                        }   
+                    }
+                }
+            }
+        }
+
+
+        private CGeommPatch GetPatch( int x, int z )
+        {
+            //不合法的输入直接排队
+            if (x < 0 || x >= mNumPatchesPerSize || z < 0 || z >= mNumPatchesPerSize)
+            {
+                return null;
+            }
+
+            int idx = GetPatchIndex(x, z);
+            return (idx >= 0 && idx < mGeommPatchs.Count) ? mGeommPatchs[idx] : null;
+        }
+
+
+        private int GetPatchIndex(int x, int z )
+        {
+            return z * mNumPatchesPerSize + x;
+        }
+
+        private int GetPatchVertexIndex(int x, int z )
+        {
+            return z * mPatchSize + x;
+        }
 
         #endregion
 

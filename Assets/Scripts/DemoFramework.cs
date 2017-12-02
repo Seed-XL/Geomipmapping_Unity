@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using Assets.Scripts.Geomipmapping;
-using Assets.Scripts.Common; 
+using Assets.Scripts.Common;
+using System.Collections.Generic; 
 
 
 public class DemoFramework : MonoBehaviour {
@@ -24,11 +25,14 @@ public class DemoFramework : MonoBehaviour {
     //地形对象
     public GameObject terrainGo;
 
+    public GameObject patchPrefab; 
+
     //顶点间的距离
     public Vector3 vertexScale;
 
     //高度图的边长,也就是结点的个数
     public int heightSize;
+    public int vertexsPerPatch; 
 
     //是否从高度图读取高度信息
     //True从文件读取
@@ -46,8 +50,31 @@ public class DemoFramework : MonoBehaviour {
     public float filter;
 
 
-    public float desiredResolution = 50f;
-    public float minResolution = 10f;
+    #region  LOD 
+    [SerializeField]
+    public List<float> lodLevels = new List<float>(); 
+
+    public void ConfigLODHierarchys(int patchSize , float stepValue = 500.0f)
+    {
+        int tDivisor = patchSize - 1;
+        int tLOD = 0;
+        while (tDivisor > 2)
+        {
+            tDivisor = tDivisor >> 1;
+            tLOD++;
+        }
+
+        lodLevels.Clear(); 
+        float baseValue = 0; 
+        for(int i = 0; i < tLOD - 1 ; ++i)
+        {
+            baseValue += stepValue;
+            float lodValue = baseValue ;
+            lodLevels.Add(lodValue);      
+        }
+    }
+
+    #endregion
 
 
     #region 地图Tile
@@ -84,6 +111,7 @@ public class DemoFramework : MonoBehaviour {
         mGeoMappingTerrain = new CGeomipmappingTerrain();
         //制造高度图
         mGeoMappingTerrain.MakeTerrainFault(heightSize, iterations, (ushort)minHeightValue, (ushort)maxHeightValue, filter);
+        mGeoMappingTerrain.ConfigGeommaping(vertexsPerPatch, patchPrefab); 
 
         //设置对应的纹理块
         AddTile(enTileTypes.lowest_tile);
@@ -204,12 +232,11 @@ public class DemoFramework : MonoBehaviour {
     {
         if (mGeoMappingTerrain != null)
         {
-           
-           
+                    
             if( renderGeoMappingCLOD )
             {
                 Profiler.BeginSample("QuadTree.Render");
-                mGeoMappingTerrain.CLOD_Render(ref mMeshData, vertexScale);
+                mGeoMappingTerrain.CLOD_Render(mGeoMappingTerrain.TerrainTexture,detailTexture,vertexScale);
                 Profiler.EndSample();
             }
             else
