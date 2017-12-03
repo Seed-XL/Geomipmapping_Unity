@@ -66,7 +66,7 @@ public class DemoFramework : MonoBehaviour {
 
         lodLevels.Clear(); 
         float baseValue = 0; 
-        for(int i = 0; i < tLOD - 1 ; ++i)
+        for(int i = 0; i < tLOD  ; ++i)
         {
             baseValue += stepValue;
             float lodValue = baseValue ;
@@ -105,51 +105,30 @@ public class DemoFramework : MonoBehaviour {
     //4、设置光照阴影
     void Start()
     {
-        InitMeshData();
+        //InitMeshData();
         InitRenderMode(); 
     
         mGeoMappingTerrain = new CGeomipmappingTerrain();
         //制造高度图
         mGeoMappingTerrain.MakeTerrainFault(heightSize, iterations, (ushort)minHeightValue, (ushort)maxHeightValue, filter);
-        mGeoMappingTerrain.ConfigGeommaping(vertexsPerPatch, patchPrefab); 
-
+      
         //设置对应的纹理块
         AddTile(enTileTypes.lowest_tile);
         AddTile(enTileTypes.low_tile);
         AddTile(enTileTypes.high_tile);
         AddTile(enTileTypes.highest_tile);
         mGeoMappingTerrain.GenerateTextureMap((uint)terrainTextureSize, (ushort)maxHeightValue, (ushort)minHeightValue);
-        ApplyTerrainTexture(mGeoMappingTerrain.TerrainTexture);
 
+        ConfigLODHierarchys(vertexsPerPatch); 
+        //必须放最后s
+        mGeoMappingTerrain.ConfigGeommaping(vertexsPerPatch, patchPrefab,terrainGo, mGeoMappingTerrain.TerrainTexture, detailTexture);
     }
 
 
     #region 地图块操作
 
 
-    private void ApplyTerrainTexture(Texture2D texture)
-    {
-        if (terrainGo != null)
-        {
-            MeshRenderer meshRender = terrainGo.GetComponent<MeshRenderer>();
-            if (meshRender != null)
-            {
-                Shader terrainShader = Shader.Find("Terrain/QuadTree/TerrainRender");
-                if (terrainShader != null)
-                {
-                    meshRender.material = new Material(terrainShader);
-                    if (meshRender.material != null)
-                    {
-                        meshRender.material.SetTexture("_MainTex", texture);
-                        if (detailTexture != null)
-                        {
-                            meshRender.material.SetTexture("_DetailTex", detailTexture);
-                        }
-                    }
-                }
-            }
-        }
-    }
+
 
 
     void AddTile(enTileTypes tileType)
@@ -235,50 +214,25 @@ public class DemoFramework : MonoBehaviour {
                     
             if( renderGeoMappingCLOD )
             {
-                Profiler.BeginSample("QuadTree.Render");
-                mGeoMappingTerrain.CLOD_Render(mGeoMappingTerrain.TerrainTexture,detailTexture,vertexScale);
+                Profiler.BeginSample("Geomipmapping.Render");
+                mGeoMappingTerrain.UpdatePatch(renderCamera, vertexScale, lodLevels);
+                Profiler.EndSample();
+
+                Profiler.BeginSample("Geomipmapping.Render");
+                mGeoMappingTerrain.CLOD_Render(vertexScale);
                 Profiler.EndSample();
             }
             else
             {
-                Profiler.BeginSample("Normla.Render");
-                mGeoMappingTerrain.Render(ref mMeshData, vertexScale);
+                Profiler.BeginSample("Normal.Render");
+                //mGeoMappingTerrain.Render(ref mMeshData, vertexScale);
                 Profiler.EndSample();
             }
           
         }
     }
 
-    public void InitMeshData()
-    {
-        if (null == terrainGo)
-        {
-            Debug.LogError("Terrain GameObject is Null");
-            return;
-        }
-
-        MeshFilter meshFilter = terrainGo.GetComponent<MeshFilter>();
-        if (null == meshFilter)
-        {
-            Debug.LogError("Terrain without Comp [MeshFilter]");
-            return;
-        }
-
-        if (meshFilter.mesh == null)
-        {
-            meshFilter.mesh = new Mesh();
-        }
-
-       
-
-        int vertexCnt = heightSize * heightSize;
-        int trianglesCnt = (heightSize - 1) * (heightSize - 1) * 6; 
-        mMeshData.mVertices = new Vector3[vertexCnt];
-        mMeshData.mUV = new Vector2[vertexCnt];
-        mMeshData.mNormals = new Vector3[vertexCnt];
-        mMeshData.mTriangles = new int[trianglesCnt];
-        mMeshData.mMesh = meshFilter.mesh;
-    }
+    
 
 
 

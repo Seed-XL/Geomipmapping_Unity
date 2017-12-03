@@ -299,7 +299,9 @@ namespace Assets.Scripts.Common
         }
 
 
-        private GameObject mPatchGo; 
+        private GameObject mPatchGo;
+        private Texture2D mColorTex;
+        private Texture2D mDetailTex; 
         public Mesh mMesh;
         public Vector3[] mVertices;
         public Vector2[] mUV;
@@ -308,30 +310,45 @@ namespace Assets.Scripts.Common
 
 
         private int mTriIdx;
-        private int mPatchsPerSide;
         private int mPatchSize;
-        private int mHeightMapSize;
-
 
         public bool mbDrawLeft;
         public bool mbDrawTop;
         public bool mbDrawRight;
         public bool mbDrawBottom; 
 
-        //没有Scale过的顶点
-        public float RawCenterX
+        //Patch中点对应的顶点索引
+        public int PatchCenterXIndex
         {
             get
             {
-                return mPatchXIndex * mPatchSize + ((float)mPatchSize / 2.0f);
+                return mPatchXIndex * mPatchSize + mPatchSize / 2;
             }
         }
 
-        public float RawCenterZ
+        public int PatchCenterZIndex
         {
             get
             {
-                return mPatchZIndex * mPatchSize + ((float)mPatchSize / 2.0f);
+                return mPatchZIndex * mPatchSize + mPatchSize / 2;
+            }
+        }
+
+        //Patch的中心点，在Pacth是属于什么位置
+        public int CenterXInPatch
+        {
+            get
+            {
+                return mPatchSize / 2; 
+            }
+        }
+
+
+        public int CenterZInPatch
+        {
+            get
+            {
+                return mPatchSize / 2; 
             }
         }
 
@@ -341,10 +358,10 @@ namespace Assets.Scripts.Common
             int patchX, 
             int patchZ,
             int patchSize ,  //奇数
-            int patchsPerSide,
-            int heightMapSize,
             int initLOD,
-            GameObject prefab
+            GameObject prefab,
+            Texture2D colorTexture ,
+            Texture2D detailTexture 
             )
         {
             //Patch的索引
@@ -353,25 +370,24 @@ namespace Assets.Scripts.Common
 
 
             mPatchSize = patchSize; 
-            mPatchsPerSide = patchsPerSide;
-            mHeightMapSize = heightMapSize; 
             mTriIdx = 0;
             mLOD = initLOD;
             mDistance = 0.0f; 
 
-            Vector3 patchPos = new Vector3(patchX, 0, patchZ);
-
             int vertexCnt = mPatchSize * mPatchSize;
             int trianglesCnt = (mPatchSize - 1) * (mPatchSize - 1) * 6;
 
+            mColorTex = colorTexture;
+            mDetailTex = detailTexture; 
             mVertices = new Vector3[vertexCnt];
             mNormals = new Vector3[vertexCnt];
             mUV = new Vector2[vertexCnt]; ;
             mTriangles = new int[trianglesCnt];
             mMesh = null;
 
+
             //生成纹理之类的
-            mPatchGo = GameObject.Instantiate(prefab, patchPos, Quaternion.identity) as GameObject; 
+            mPatchGo = prefab; 
             if( mPatchGo != null )
             {
                 //1、生成Mesh
@@ -384,8 +400,9 @@ namespace Assets.Scripts.Common
 
                 if (meshFilter.mesh == null)
                 {
-                    meshFilter.mesh = new Mesh();
+                    meshFilter.mesh = new Mesh();  
                 }
+                mMesh = meshFilter.mesh;
 
                 //2、生成材质   
                 MeshRenderer meshRender = mPatchGo.GetComponent<MeshRenderer>();
@@ -395,14 +412,14 @@ namespace Assets.Scripts.Common
                     if (terrainShader != null)
                     {
                         meshRender.material = new Material(terrainShader);
-                        //if (meshRender.material != null)
-                        //{
-                        //    meshRender.material.SetTexture("_MainTex", texture);
-                        //    if (detailTexture != null)
-                        //    {
-                        //        meshRender.material.SetTexture("_DetailTex", detailTexture);
-                        //    }
-                        //}
+                        if (meshRender.material != null)
+                        {
+                            meshRender.material.SetTexture("_MainTex", mColorTex);
+                            if (detailTexture != null)
+                            {
+                                meshRender.material.SetTexture("_DetailTex", mDetailTex);
+                            }
+                        }
                     }
                 }
             }
@@ -429,6 +446,68 @@ namespace Assets.Scripts.Common
             RenderVertex(a.mVerticeIdx, a.mVertice, a.mUV);
             RenderVertex(b.mVerticeIdx, b.mVertice, b.mUV);
             RenderVertex(c.mVerticeIdx, c.mVertice, c.mUV);
+        }
+
+
+        public void RenderFan(
+            stVertexAtrribute center,
+            stVertexAtrribute bottomLeft, 
+            stVertexAtrribute leftMid ,
+            stVertexAtrribute topLeft,
+            stVertexAtrribute topMid ,
+            stVertexAtrribute topRight,
+            stVertexAtrribute rightMid ,
+            stVertexAtrribute bottomRight,
+            stVertexAtrribute bottomMid,
+            bool drawLeftMid ,
+            bool drawTopMid,
+            bool drawRightMid,
+            bool drawBottomMid
+            )
+        {
+            //左边的三角形扇
+            if( drawLeftMid )
+            {
+                RenderTriangle(center, bottomLeft, leftMid);
+                RenderTriangle(center, bottomLeft, topLeft); 
+            }     
+            else
+            {
+                RenderTriangle(center, bottomLeft, topLeft); 
+            }
+
+            //顶部的三角形扇
+            if( drawTopMid )
+            {
+                RenderTriangle(center, topLeft, topMid);
+                RenderTriangle(center, topLeft, topRight); 
+            }
+            else
+            {
+                RenderTriangle(center, topLeft, topRight); 
+            }
+
+            //右边的三角形扇
+            if( drawRightMid )
+            {
+                RenderTriangle(center, topRight, rightMid);
+                RenderTriangle(center, rightMid, bottomRight); 
+            }
+            else
+            {
+                RenderTriangle(center, topRight, bottomRight); 
+            }
+
+            //下方的三角形扇
+            if( drawBottomMid )
+            {
+                RenderTriangle(center, bottomRight, bottomMid);
+                RenderTriangle(center, bottomMid, bottomLeft); 
+            }
+            else
+            {
+                RenderTriangle(center, bottomRight, bottomLeft); 
+            }
         }
 
 

@@ -738,7 +738,12 @@ namespace Assets.Scripts.Geomipmapping
         /// 每条边有多少个顶点
         /// </summary>
         /// <param name="oneSideVertexPerPatch"></param>
-        public void ConfigGeommaping( int vertexPerPatch , GameObject patchPrefab)
+        public void ConfigGeommaping(
+            int vertexPerPatch,
+            GameObject patchPrefab,
+            GameObject patchParent,
+            Texture2D colorTexture,
+            Texture2D detailTexture )
         {
             if( vertexPerPatch > 0 
                 && mHeightData.IsValid() )
@@ -760,14 +765,20 @@ namespace Assets.Scripts.Geomipmapping
                 {
                     for(int x = 0; x < mNumPatchesPerSize; x++)
                     {
+                        GameObject patchGo = GameObject.Instantiate(patchPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+                        if( patchGo != null )
+                        {
+                            patchGo.transform.SetParent(patchParent.transform);
+                        }
+
                         CGeommPatch patch = new CGeommPatch(
                             x,
                             z,
                             mPatchSize,
-                            mNumPatchesPerSize,
-                            mHeightData.mSize,
                             mMaxLOD,
-                            patchPrefab
+                            patchGo,
+                            colorTexture,
+                            detailTexture
                             );
 
                         mGeommPatchs.Add(patch);
@@ -777,7 +788,7 @@ namespace Assets.Scripts.Geomipmapping
             }
         }
 
-        public void CLOD_Render(Texture2D terrainTexture, Texture2D detailTexture, Vector3 vectorScale)
+        public void CLOD_Render(Vector3 vectorScale)
         {
             for (int z = 0; z < mNumPatchesPerSize; ++z)
             {
@@ -802,13 +813,13 @@ namespace Assets.Scripts.Geomipmapping
                     patch.mbDrawBottom = CanDrawMidVertex(curPatchLOD, bottomNeighborPatch);
 
                     patch.Reset(); 
-                    RenderPatch(patch, terrainTexture, detailTexture, vectorScale); 
+                    RenderPatch(patch, vectorScale); 
                 }
             }
         }
        
 
-        public void RenderPatch(CGeommPatch patch , Texture2D  terrainTexture , Texture2D detailTexture , Vector3 vectorScale )
+        public void RenderPatch(CGeommPatch patch , Vector3 vectorScale )
         {
             if( null == patch )
             {
@@ -825,12 +836,13 @@ namespace Assets.Scripts.Geomipmapping
                 tLOD--; 
             }
 
-            int patchVertexIdx = 0; 
             fSize /= iDivisor;
             float fHalfSize = fSize / 2.0f;
-            for (float z = -fHalfSize; ((int)z+fHalfSize) < mPatchSize+1; z+= fSize )
+
+            //Patch是从左往右,从下到上，而不是先中心点开始绘制的
+            for (float inPatchZ = fHalfSize; ((int)inPatchZ+fHalfSize) < mPatchSize+1; inPatchZ+= fSize )
             {
-                for (float x = -fHalfSize; ((int)x + fHalfSize) < mPatchSize + 1 ; x+=fSize )
+                for (float inPatchX = fHalfSize; ((int)inPatchX + fHalfSize) < mPatchSize + 1 ; inPatchX+=fSize )
                 {
                     bool bDrawLeft = false;
                     bool bDrawTop = false;
@@ -838,7 +850,7 @@ namespace Assets.Scripts.Geomipmapping
                     bool bDrawBottom = false; 
 
                     //最左边的Fan
-                    if( x == -fHalfSize )
+                    if( inPatchX == fHalfSize )
                     {
                         bDrawLeft = patch.mbDrawLeft;                           
                     }
@@ -847,17 +859,17 @@ namespace Assets.Scripts.Geomipmapping
                         bDrawLeft = true;   //如果是内部的Fan，即中点必须画 
                     }
 
-                    if (z == fHalfSize)
+                    if (inPatchZ == fHalfSize)
                     {
-                        bDrawTop = patch.mbDrawTop;
+                        bDrawBottom = patch.mbDrawBottom;
                     }
                     else
                     {
-                        bDrawTop = true;   //如果是内部的Fan，即中点必须画 
+                        bDrawBottom = true;   //如果是内部的Fan，即中点必须画 
                     }
 
 
-                    if (x == fHalfSize)
+                    if (inPatchX >= (mPatchSize - fHalfSize))
                     {
                         bDrawRight = patch.mbDrawRight;
                     }
@@ -867,22 +879,22 @@ namespace Assets.Scripts.Geomipmapping
                     }
 
 
-                    if (z == -fHalfSize)
+                    if (inPatchZ >= ( mPatchSize -  fHalfSize))
                     {
-                        bDrawBottom = patch.mbDrawBottom;
+                        bDrawTop = patch.mbDrawTop;
                     }
                     else
                     {
-                        bDrawBottom = true;   //如果是内部的Fan，即中点必须画 
+                        bDrawTop = true;   //如果是内部的Fan，即中点必须画 
                     }
 
-                    RenderFan(ref patchVertexIdx,  x, z, fSize, bDrawLeft, bDrawTop, bDrawRight, bDrawBottom, patch, terrainTexture, detailTexture, vectorScale);
+                    RenderFan( inPatchX, inPatchZ, fSize, bDrawLeft, bDrawTop, bDrawRight, bDrawBottom, patch, vectorScale);
                 }
             }
         }
 
-        private void RenderFan( ref int vertexIdx, float x,float z,float fanSize, bool drawLeft,bool drawTop,bool drawRight,bool drawBottom,
-            CGeommPatch patch, Texture2D terrainTexture, Texture2D detailTexture, Vector3 vectorScale)
+        private void RenderFan( float inPatchX,float inPatchZ,float fanSize, bool drawLeft,bool drawTop,bool drawRight,bool drawBottom,
+            CGeommPatch patch, Vector3 vectorScale)
         {
             if( null == patch )
             {
@@ -890,26 +902,66 @@ namespace Assets.Scripts.Geomipmapping
             }
 
             float fHalfSize = fanSize / 2.0f;
-            float fanCenterRawX = patch.RawCenterX + x;  //在高度图里面的位置
-            float fanCenterRawZ = patch.RawCenterZ + z;
-            float fanLeftRawX = fanCenterRawX - fHalfSize;
-            float fanRightRawX = fanCenterRawX + fHalfSize;
-            float fanTopRawZ = fanCenterRawZ + fHalfSize;
-            float fanBottomRawZ = fanCenterRawZ - fHalfSize; 
-            //float fanCenterX = fanCenterRawX * vectorScale.x;
-            //float fanCenterZ = fanCenterRawZ * vectorScale.z;
-            //float fanCenterY = mHeightData.GetRawHeightValue((int)fanCenterRawX, (int)fanCenterRawZ) * vectorScale.y;
+            int iHalfSize = (int)fHalfSize; 
 
-            float fTexLeft = ((float)Mathf.Abs(fanCenterRawX - fHalfSize) / mHeightData.mSize) ;
-            float fTexBottom = ((float)Mathf.Abs(fanCenterRawZ - fHalfSize) / mHeightData.mSize)  ;
-            float fTexRight = ((float)Mathf.Abs(fanCenterRawX + fHalfSize) / mHeightData.mSize)  ;
-            float fTexTop = ((float)Mathf.Abs(fanCenterRawZ + fHalfSize) / mHeightData.mSize)  ;
+            //在Patch里面的顶点位置
+            int xCenterInPatchVertexs = (int)inPatchX;
+            int zCenterInPatchVertexs = (int)inPatchZ;
+            int xLeftInPatchVertexs = xCenterInPatchVertexs - iHalfSize;
+            int zTopInPatchVertexs = zCenterInPatchVertexs + iHalfSize;
+            int xRightInPatchVertexs = xCenterInPatchVertexs + iHalfSize;
+            int zBottomInPatchVertexs = zCenterInPatchVertexs - iHalfSize; 
+
+            //相对于Patch中心点的偏移
+            int xOffsetFromPatchCentexX = xCenterInPatchVertexs - patch.CenterXInPatch;
+            int zOffsetFromPatchCentexZ = zCenterInPatchVertexs - patch.CenterZInPatch; 
+
+          
+            //在高度图里面的位置
+            float fanCenterRawXInHeight = patch.PatchCenterXIndex + xOffsetFromPatchCentexX;  
+            float fanCenterRawZInHeight = patch.PatchCenterZIndex + zOffsetFromPatchCentexZ ;
+            float fanLeftRawXInHeight = fanCenterRawXInHeight - fHalfSize;
+            float fanRightRawXInHeight = fanCenterRawXInHeight + fHalfSize;
+            float fanTopRawZInHeight = fanCenterRawZInHeight + fHalfSize;
+            float fanBottomRawZInHeight = fanCenterRawZInHeight - fHalfSize;
+
+            float fTexLeft = ((float)Mathf.Abs(fanCenterRawXInHeight - fHalfSize) / mHeightData.mSize) ;
+            float fTexBottom = ((float)Mathf.Abs(fanCenterRawZInHeight - fHalfSize) / mHeightData.mSize)  ;
+            float fTexRight = ((float)Mathf.Abs(fanCenterRawXInHeight + fHalfSize) / mHeightData.mSize)  ;
+            float fTexTop = ((float)Mathf.Abs(fanCenterRawZInHeight + fHalfSize) / mHeightData.mSize)  ;
 
             float fMidX = ((fTexLeft + fTexRight) / 2);
             float fMidZ = ((fTexBottom + fTexTop) / 2);
 
 
-            stVertexAtrribute centerVertex = GenerateVertex(vertexIdx, fanCenterRawX, fanCenterRawZ, fMidX, fMidZ, vectorScale);
+            stVertexAtrribute centerVertex = GenerateVertex( GetPatchVertexIndex(xCenterInPatchVertexs,zCenterInPatchVertexs)  , fanCenterRawXInHeight, fanCenterRawZInHeight, fMidX, fMidZ, vectorScale);
+            stVertexAtrribute bottomLeftVertex = GenerateVertex(GetPatchVertexIndex(xLeftInPatchVertexs, zBottomInPatchVertexs), fanLeftRawXInHeight, fanBottomRawZInHeight, fTexLeft, fTexBottom, vectorScale);
+            stVertexAtrribute leftMidVertex = GenerateVertex(GetPatchVertexIndex(xLeftInPatchVertexs, zCenterInPatchVertexs), fanLeftRawXInHeight, fanCenterRawZInHeight, fTexLeft, fMidZ, vectorScale);
+            stVertexAtrribute topLeftVertex = GenerateVertex(GetPatchVertexIndex(xLeftInPatchVertexs, zTopInPatchVertexs), fanLeftRawXInHeight, fanTopRawZInHeight, fTexLeft, fTexTop, vectorScale);
+            stVertexAtrribute topMidVertex = GenerateVertex(GetPatchVertexIndex(xCenterInPatchVertexs, zTopInPatchVertexs), fanCenterRawXInHeight, fanTopRawZInHeight, fMidX, fTexTop, vectorScale);
+            stVertexAtrribute topRightVertex = GenerateVertex(GetPatchVertexIndex(xRightInPatchVertexs, zTopInPatchVertexs), fanRightRawXInHeight, fanTopRawZInHeight, fTexRight, fTexTop, vectorScale);
+            stVertexAtrribute rightMidVertex = GenerateVertex(GetPatchVertexIndex(xRightInPatchVertexs, zCenterInPatchVertexs), fanRightRawXInHeight, fanCenterRawZInHeight, fTexRight, fMidZ, vectorScale);
+            stVertexAtrribute bottomRightVertex = GenerateVertex(GetPatchVertexIndex(xRightInPatchVertexs, zBottomInPatchVertexs), fanRightRawXInHeight, fanBottomRawZInHeight, fTexRight, fTexBottom, vectorScale);
+            stVertexAtrribute bottomMidVertex = GenerateVertex(GetPatchVertexIndex(xCenterInPatchVertexs, zBottomInPatchVertexs), fanCenterRawXInHeight, fanBottomRawZInHeight, fMidX, fTexBottom, vectorScale);
+
+
+            patch.RenderFan(
+                centerVertex,
+                bottomLeftVertex,
+                leftMidVertex,
+                topLeftVertex,
+                topMidVertex,
+                topRightVertex,
+                rightMidVertex,
+                bottomRightVertex,
+                bottomMidVertex,
+                drawLeft,
+                drawTop,
+                drawRight,
+                drawBottom
+                );
+            patch.Present(); 
+
         }
 
 
@@ -939,8 +991,6 @@ namespace Assets.Scripts.Geomipmapping
             }
 
 
-            float fScalePatchSize = mPatchSize * vectorScale.x; 
-
             for(int z = 0; z < mNumPatchesPerSize; z++)
             {
                 for(int x = 0; x < mNumPatchesPerSize;x++)
@@ -951,9 +1001,9 @@ namespace Assets.Scripts.Geomipmapping
                         continue; 
                     }
 
-                    float patchCenterX = patch.RawCenterX * vectorScale.x;
-                    float patchCenterZ = patch.RawCenterZ * vectorScale.z;
-                    float patchCenterY = mHeightData.GetRawHeightValue((int)patch.RawCenterX,(int)patch.RawCenterZ) * vectorScale.y;
+                    float patchCenterX = patch.PatchCenterXIndex * vectorScale.x;
+                    float patchCenterZ = patch.PatchCenterZIndex * vectorScale.z;
+                    float patchCenterY = mHeightData.GetRawHeightValue(patch.PatchCenterXIndex,patch.PatchCenterZIndex) * vectorScale.y;
 
                     patch.mDistance = Mathf.Sqrt(
                            Mathf.Pow(viewCamera.transform.position.x - patchCenterX, 2) +
