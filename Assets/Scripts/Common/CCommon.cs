@@ -317,7 +317,7 @@ namespace Assets.Scripts.Common
         public bool mbDrawRight;
         public bool mbDrawBottom; 
 
-        //Patch中点对应的顶点索引
+        //Patch中点对应的顶点索引,在高度图中
         public int PatchCenterXIndex
         {
             get
@@ -333,6 +333,24 @@ namespace Assets.Scripts.Common
                 return mPatchZIndex * mPatchSize + mPatchSize / 2;
             }
         }
+
+
+        public int PatchCenterXInHeight
+        {
+            get
+            {
+                return mPatchXIndex * (mPatchSize - 1) + mPatchSize / 2;
+            }
+        }
+
+        public int PatchCenterZInHeight
+        {
+            get
+            {
+                return mPatchZIndex * (mPatchSize - 1) + mPatchSize / 2;
+            }
+        }
+
 
         //Patch的中心点，在Pacth是属于什么位置
         public int CenterXInPatch
@@ -550,7 +568,61 @@ namespace Assets.Scripts.Common
                 }
             }
 
+        }// Reset 
+
+        public void Render( stHeightData heightData , Vector3 vectorScale )
+        {
+            Profiler.BeginSample("CGeomipmappin.Render.Rebuild UV and Vertex");
+            for (int z = 0; z < mPatchSize; ++z )
+            {
+                for(int x = 0; x < mPatchSize; ++x )
+                {
+                    //相对于Patch的偏移
+                    int xOffsetFromPatchCentexX = x - CenterXInPatch;
+                    int zOffsetFromPatchCentexZ = z - CenterZInPatch;
+
+                    //顶点在Patch的位置
+                    int inPatchIdx = z * mPatchSize + x;
+
+                    //在高度图里面的位置
+                    int indexX = PatchCenterXInHeight + xOffsetFromPatchCentexX;
+                    int indexZ = PatchCenterZInHeight + zOffsetFromPatchCentexZ;
+                    float height = heightData.GetRawHeightValue(indexX, indexZ) * vectorScale.y;
+                    float xPos = indexX * vectorScale.x;
+                    float zPos = indexZ * vectorScale.z; 
+
+                    mVertices[inPatchIdx] = new Vector3(xPos , height , zPos);
+                    mUV[inPatchIdx] = new Vector2((float)indexX / (float)heightData.mSize, (float)indexZ / (float)heightData.mSize);
+                    mNormals[inPatchIdx] = Vector3.zero;
+                }
+            }
+
+            Profiler.EndSample();
+
+
+            Profiler.BeginSample("CGeomipmappin.Render.Rebuild Triangles");
+            int nIdx = 0;
+            for (int z = 0; z < mPatchSize - 1; ++z)
+            {
+                for (int x = 0; x <mPatchSize - 1; ++x)
+                {
+                    int bottomLeftIdx = z * mPatchSize + x;
+                    int topLeftIdx = (z + 1) * mPatchSize + x;
+                    int topRightIdx = topLeftIdx + 1;
+                    int bottomRightIdx = bottomLeftIdx + 1;
+
+                    mTriangles[nIdx++] = bottomLeftIdx;
+                    mTriangles[nIdx++] = topLeftIdx;
+                    mTriangles[nIdx++] = bottomRightIdx;
+                    mTriangles[nIdx++] = topLeftIdx;
+                    mTriangles[nIdx++] = topRightIdx;
+                    mTriangles[nIdx++] = bottomRightIdx;
+                }
+            }
+
+            Profiler.EndSample();
         }
+
 
     }
 

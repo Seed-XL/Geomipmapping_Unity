@@ -55,66 +55,23 @@ namespace Assets.Scripts.Geomipmapping
 
 
 
-        public void Render(ref stTerrainMeshData meshData, Vector3 vertexScale)
+        public void Render(Vector3 vertexScale)
         {
-            Mesh mesh = meshData.mMesh;
-            if (null == mesh)
+            for (int z = 0; z < mNumPatchesPerSize; ++z)
             {
-                Debug.LogError("Terrain without Mesh");
-                return;
-            }
-
-            meshData.Reset();
-
-
-            Profiler.BeginSample("Rebuild Vertices & UVs");
-            Vector2[] uv = meshData.mUV;
-            Vector3[] normals = meshData.mNormals;
-            Vector3[] vertices = meshData.mVertices;
-            for (int z = 0; z < mHeightData.mSize; ++z)
-            {
-                for (int x = 0; x < mHeightData.mSize; ++x)
+                for (int x = 0; x < mNumPatchesPerSize; ++x)
                 {
-                    float y = mHeightData.GetRawHeightValue(x, z);
-                    int vertexIdx = z * mHeightData.mSize + x;
-                    vertices[vertexIdx] = new Vector3(x * vertexScale.x, y * vertexScale.y, z * vertexScale.z);
-                    uv[vertexIdx] = new Vector2((float)x / (float)mHeightData.mSize, (float)z / (float)mHeightData.mSize);
-                    normals[vertexIdx] = Vector3.zero;
+                    CGeommPatch patch = GetPatch(x, z);
+                    if (null == patch)
+                    {
+                        continue;
+                    }
+
+                    patch.Reset(); 
+                    patch.Render(mHeightData, vertexScale);
+                    patch.Present(); 
                 }
-            }
-            //mesh.vertices = vertices;
-            //mesh.uv = uv;
-            //mesh.normals = normals;
-            Profiler.EndSample();
-
-
-            Profiler.BeginSample("Rebuild Triangles");
-            int nIdx = 0;
-            int[] triangles = meshData.mTriangles; //一个正方形对应两个三角形，6个顶点
-            for (int z = 0; z < mHeightData.mSize - 1; ++z)
-            {
-                for (int x = 0; x < mHeightData.mSize - 1; ++x)
-                {
-                    int bottomLeftIdx = z * mHeightData.mSize + x;
-                    int topLeftIdx = (z + 1) * mHeightData.mSize + x;
-                    int topRightIdx = topLeftIdx + 1;
-                    int bottomRightIdx = bottomLeftIdx + 1;
-
-                    triangles[nIdx++] = bottomLeftIdx;
-                    triangles[nIdx++] = topLeftIdx;
-                    triangles[nIdx++] = bottomRightIdx;
-                    triangles[nIdx++] = topLeftIdx;
-                    triangles[nIdx++] = topRightIdx;
-                    triangles[nIdx++] = bottomRightIdx;
-
-                }
-            }
-
-            //mesh.triangles = triangles;
-
-            meshData.Present();
-
-            Profiler.EndSample();
+            }    
         }
 
 
@@ -812,8 +769,11 @@ namespace Assets.Scripts.Geomipmapping
                     patch.mbDrawRight = CanDrawMidVertex(curPatchLOD, rightNeighborPatch);
                     patch.mbDrawBottom = CanDrawMidVertex(curPatchLOD, bottomNeighborPatch);
 
-                    patch.Reset(); 
-                    RenderPatch(patch, vectorScale); 
+                    patch.Reset();
+
+                    Profiler.BeginSample("Geomipmapping.RenderPatch");
+                    RenderPatch(patch, vectorScale);
+                    Profiler.EndSample(); 
                 }
             }
         }
@@ -888,7 +848,9 @@ namespace Assets.Scripts.Geomipmapping
                         bDrawTop = true;   //如果是内部的Fan，即中点必须画 
                     }
 
+                    Profiler.BeginSample("Geomipmapping.RenderFan"); 
                     RenderFan( inPatchX, inPatchZ, fSize, bDrawLeft, bDrawTop, bDrawRight, bDrawBottom, patch, vectorScale);
+                    Profiler.EndSample(); 
                 }
             }
         }

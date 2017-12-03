@@ -225,7 +225,7 @@ public class DemoFramework : MonoBehaviour {
             else
             {
                 Profiler.BeginSample("Normal.Render");
-                //mGeoMappingTerrain.Render(ref mMeshData, vertexScale);
+                mGeoMappingTerrain.Render(vertexScale);
                 Profiler.EndSample();
             }
           
