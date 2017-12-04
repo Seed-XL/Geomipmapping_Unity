@@ -92,13 +92,6 @@ public class DemoFramework : MonoBehaviour {
 
 
 
-    #region  顶点数据放里
-
-    private stTerrainMeshData mMeshData; 
-
-    #endregion
-
-
     //1、读取高度图，
     //2、设置顶点间距离，
     //3、读取纹理
@@ -226,6 +219,7 @@ public class DemoFramework : MonoBehaviour {
             {
                 Profiler.BeginSample("Normal.Render");
                 mGeoMappingTerrain.Render(vertexScale);
+                //mGeoMappingTerrain.CombineMesh(terrainGo,detailTexture);
                 Profiler.EndSample();
             }
           
@@ -233,9 +227,6 @@ public class DemoFramework : MonoBehaviour {
     }
 
     
-
-
-
     public void InitRenderMode() 
     {
         if (cameraGo != null)

@@ -1,4 +1,4 @@
-﻿Shader "Terrain/QuadTree/TerrainRender" 
+﻿Shader "Terrain/Geomipmapping/TerrainRender" 
 {
 	Properties 
     {

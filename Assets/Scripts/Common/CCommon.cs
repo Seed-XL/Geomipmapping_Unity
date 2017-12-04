@@ -303,10 +303,30 @@ namespace Assets.Scripts.Common
         private Texture2D mColorTex;
         private Texture2D mDetailTex; 
         public Mesh mMesh;
+        public MeshFilter mMeshFilter; 
         public Vector3[] mVertices;
         public Vector2[] mUV;
         public Vector3[] mNormals;
         public int[] mTriangles;
+
+
+        public Mesh PatchMesh
+        {
+            get
+            {
+                return mMesh; 
+            }
+        }
+
+
+        public MeshFilter PatchMeshFilter
+        {
+            get
+            {
+                return mMeshFilter; 
+            }
+        }
+
 
 
         private int mTriIdx;
@@ -421,12 +441,13 @@ namespace Assets.Scripts.Common
                     meshFilter.mesh = new Mesh();  
                 }
                 mMesh = meshFilter.mesh;
+                mMeshFilter = meshFilter; 
 
                 //2、生成材质   
                 MeshRenderer meshRender = mPatchGo.GetComponent<MeshRenderer>();
                 if (meshRender != null)
                 {
-                    Shader terrainShader = Shader.Find("Terrain/QuadTree/TerrainRender");
+                    Shader terrainShader = Shader.Find("Terrain/Geomipmapping/TerrainRender");
                     if (terrainShader != null)
                     {
                         meshRender.material = new Material(terrainShader);
@@ -487,7 +508,7 @@ namespace Assets.Scripts.Common
             if( drawLeftMid )
             {
                 RenderTriangle(center, bottomLeft, leftMid);
-                RenderTriangle(center, bottomLeft, topLeft); 
+                RenderTriangle(center, leftMid, topLeft); 
             }     
             else
             {
@@ -498,7 +519,7 @@ namespace Assets.Scripts.Common
             if( drawTopMid )
             {
                 RenderTriangle(center, topLeft, topMid);
-                RenderTriangle(center, topLeft, topRight); 
+                RenderTriangle(center, topMid, topRight); 
             }
             else
             {
@@ -567,6 +588,11 @@ namespace Assets.Scripts.Common
                     mTriangles[i] = 0;
                 }
             }
+
+            //if( mMeshFilter != null )
+            //{
+            //    mMeshFilter.gameObject.SetActive(true); 
+            //}
 
         }// Reset 
 

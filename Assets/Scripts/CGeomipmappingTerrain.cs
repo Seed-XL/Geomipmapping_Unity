@@ -691,6 +691,60 @@ namespace Assets.Scripts.Geomipmapping
         }
 
 
+        public void CombineMesh(  GameObject terrainGo ,Texture2D  detailTexture )
+        {
+            if( terrainGo != null )
+            {
+                MeshFilter rootMeshFilter = terrainGo.GetComponent<MeshFilter>(); 
+                if( rootMeshFilter != null )
+                {
+                    Mesh rootMesh = null;
+                    if (rootMeshFilter.mesh == null)
+                    {
+                        rootMeshFilter.mesh = new Mesh();
+                    }//if mesh 
+
+                    //2、生成材质   
+                    MeshRenderer meshRender = terrainGo.GetComponent<MeshRenderer>();
+                    if (meshRender != null)
+                    {
+                        Shader terrainShader = Shader.Find("Terrain/Geomipmapping/TerrainRender");
+                        if (terrainShader != null)
+                        {
+                            meshRender.material = new Material(terrainShader);
+                            meshRender.material.SetTexture("_MainTex", mTerrainTexture);
+                            if (detailTexture != null)
+                            {
+                                meshRender.material.SetTexture("_DetailTex", detailTexture);
+                            }
+                        }
+                    }  //mesh Render
+
+
+                    CombineInstance[] need2CombineMeshs = new CombineInstance[mGeommPatchs.Count]; 
+                    rootMesh = rootMeshFilter.mesh; 
+                    if( rootMesh != null )
+                    {
+                        for (int i = 0; i < mGeommPatchs.Count; ++i)
+                        {
+                            MeshFilter meshFilter = mGeommPatchs[i].PatchMeshFilter; 
+                            Mesh mesh = mGeommPatchs[i].PatchMesh;
+                            if ( mesh && meshFilter )
+                            {
+                                need2CombineMeshs[i].mesh = mesh;
+                                need2CombineMeshs[i].transform = meshFilter.transform.localToWorldMatrix;
+                                meshFilter.gameObject.SetActive(false); 
+                            }
+                        }
+                    }
+
+                    rootMesh.CombineMeshes(need2CombineMeshs); 
+                }
+            }
+        }
+
+
+
         /// <summary>
         /// 每条边有多少个顶点
         /// </summary>
