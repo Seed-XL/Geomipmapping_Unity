@@ -725,6 +725,7 @@ namespace Assets.Scripts.Geomipmapping
                         GameObject patchGo = GameObject.Instantiate(patchPrefab, Vector3.zero, Quaternion.identity) as GameObject;
                         if( patchGo != null )
                         {
+                            patchGo.name = string.Format("{0}_{1:D2}{2:D2}", patchGo.name, x, z); 
                             patchGo.transform.SetParent(patchParent.transform);
                         }
 
@@ -786,7 +787,8 @@ namespace Assets.Scripts.Geomipmapping
                 return; 
             }
 
-            float fSize = mPatchSize;
+            int iSize = mPatchSize;
+  
             int iDivisor = mPatchSize - 1;
             int tLOD = patch.mLOD;
 
@@ -796,13 +798,13 @@ namespace Assets.Scripts.Geomipmapping
                 tLOD--; 
             }
 
-            fSize /= iDivisor;
-            float fHalfSize = fSize / 2.0f;
+            iSize /= iDivisor;
+            int iHalfSize = iSize / 2;
 
             //Patch是从左往右,从下到上，而不是先中心点开始绘制的
-            for (float inPatchZ = fHalfSize; ((int)inPatchZ+fHalfSize) < mPatchSize+1; inPatchZ+= fSize )
+            for (int inPatchZ = iHalfSize; (inPatchZ+iHalfSize) < mPatchSize + 1 ; inPatchZ+= iSize )
             {
-                for (float inPatchX = fHalfSize; ((int)inPatchX + fHalfSize) < mPatchSize + 1 ; inPatchX+=fSize )
+                for (int inPatchX = iHalfSize; (inPatchX + iHalfSize) < mPatchSize + 1 ; inPatchX+=iSize )
                 {
                     bool bDrawLeft = false;
                     bool bDrawTop = false;
@@ -810,7 +812,7 @@ namespace Assets.Scripts.Geomipmapping
                     bool bDrawBottom = false; 
 
                     //最左边的Fan
-                    if( inPatchX == fHalfSize )
+                    if( inPatchX == iHalfSize )
                     {
                         bDrawLeft = patch.mbDrawLeft;                           
                     }
@@ -819,7 +821,7 @@ namespace Assets.Scripts.Geomipmapping
                         bDrawLeft = true;   //如果是内部的Fan，即中点必须画 
                     }
 
-                    if (inPatchZ == fHalfSize)
+                    if (inPatchZ == iHalfSize)
                     {
                         bDrawBottom = patch.mbDrawBottom;
                     }
@@ -829,7 +831,7 @@ namespace Assets.Scripts.Geomipmapping
                     }
 
 
-                    if (inPatchX >= (mPatchSize - fHalfSize))
+                    if (inPatchX >= (mPatchSize - 1 - iHalfSize))  //左边括号的那坨东西是代表最后一个顶点
                     {
                         bDrawRight = patch.mbDrawRight;
                     }
@@ -839,7 +841,7 @@ namespace Assets.Scripts.Geomipmapping
                     }
 
 
-                    if (inPatchZ >= ( mPatchSize -  fHalfSize))
+                    if (inPatchZ >= ( mPatchSize - 1 -  iHalfSize))
                     {
                         bDrawTop = patch.mbDrawTop;
                     }
@@ -849,13 +851,13 @@ namespace Assets.Scripts.Geomipmapping
                     }
 
                     Profiler.BeginSample("Geomipmapping.RenderFan"); 
-                    RenderFan( inPatchX, inPatchZ, fSize, bDrawLeft, bDrawTop, bDrawRight, bDrawBottom, patch, vectorScale);
+                    RenderFan( inPatchX, inPatchZ, iSize, bDrawLeft, bDrawTop, bDrawRight, bDrawBottom, patch, vectorScale);
                     Profiler.EndSample(); 
                 }
             }
         }
 
-        private void RenderFan( float inPatchX,float inPatchZ,float fanSize, bool drawLeft,bool drawTop,bool drawRight,bool drawBottom,
+        private void RenderFan( int inPatchX,int inPatchZ,int fanSize, bool drawLeft,bool drawTop,bool drawRight,bool drawBottom,
             CGeommPatch patch, Vector3 vectorScale)
         {
             if( null == patch )
@@ -880,12 +882,12 @@ namespace Assets.Scripts.Geomipmapping
 
           
             //在高度图里面的位置
-            float fanCenterRawXInHeight = patch.PatchCenterXIndex + xOffsetFromPatchCentexX;  
-            float fanCenterRawZInHeight = patch.PatchCenterZIndex + zOffsetFromPatchCentexZ ;
-            float fanLeftRawXInHeight = fanCenterRawXInHeight - fHalfSize;
-            float fanRightRawXInHeight = fanCenterRawXInHeight + fHalfSize;
-            float fanTopRawZInHeight = fanCenterRawZInHeight + fHalfSize;
-            float fanBottomRawZInHeight = fanCenterRawZInHeight - fHalfSize;
+            float fanCenterRawXInHeight = patch.PatchCenterXInHeight + xOffsetFromPatchCentexX;  
+            float fanCenterRawZInHeight = patch.PatchCenterZInHeight + zOffsetFromPatchCentexZ ;
+            float fanLeftRawXInHeight = fanCenterRawXInHeight - iHalfSize;
+            float fanRightRawXInHeight = fanCenterRawXInHeight + iHalfSize;
+            float fanTopRawZInHeight = fanCenterRawZInHeight + iHalfSize;
+            float fanBottomRawZInHeight = fanCenterRawZInHeight - iHalfSize;
 
             float fTexLeft = ((float)Mathf.Abs(fanCenterRawXInHeight - fHalfSize) / mHeightData.mSize) ;
             float fTexBottom = ((float)Mathf.Abs(fanCenterRawZInHeight - fHalfSize) / mHeightData.mSize)  ;
@@ -963,9 +965,9 @@ namespace Assets.Scripts.Geomipmapping
                         continue; 
                     }
 
-                    float patchCenterX = patch.PatchCenterXIndex * vectorScale.x;
-                    float patchCenterZ = patch.PatchCenterZIndex * vectorScale.z;
-                    float patchCenterY = mHeightData.GetRawHeightValue(patch.PatchCenterXIndex,patch.PatchCenterZIndex) * vectorScale.y;
+                    float patchCenterX = patch.PatchCenterXInHeight * vectorScale.x;
+                    float patchCenterZ = patch.PatchCenterZInHeight * vectorScale.z;
+                    float patchCenterY = mHeightData.GetRawHeightValue(patch.PatchCenterXInHeight,patch.PatchCenterZInHeight) * vectorScale.y;
 
                     patch.mDistance = Mathf.Sqrt(
                            Mathf.Pow(viewCamera.transform.position.x - patchCenterX, 2) +
