@@ -54,7 +54,7 @@ public class DemoFramework : MonoBehaviour {
     [SerializeField]
     public List<float> lodLevels = new List<float>(); 
 
-    public void ConfigLODHierarchys(int patchSize , float stepValue = 500.0f)
+    public void ConfigLODHierarchys(int patchSize , float stepValue = 5000.0f)
     {
         int tDivisor = patchSize - 1;
         int tLOD = 0;
@@ -207,7 +207,7 @@ public class DemoFramework : MonoBehaviour {
                     
             if( renderGeoMappingCLOD )
             {
-                Profiler.BeginSample("Geomipmapping.Render");
+                Profiler.BeginSample("Geomipmapping.UpdatePatch");
                 mGeoMappingTerrain.UpdatePatch(renderCamera, vertexScale, lodLevels);
                 Profiler.EndSample();
 

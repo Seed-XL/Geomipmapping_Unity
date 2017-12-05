@@ -318,6 +318,15 @@ namespace Assets.Scripts.Common
             }
         }
 
+        public Bounds PatchBounds
+        {
+            get
+            {
+                return mMesh.bounds; 
+            }
+        }
+
+
 
         public MeshFilter PatchMeshFilter
         {
@@ -335,26 +344,11 @@ namespace Assets.Scripts.Common
         public bool mbDrawLeft;
         public bool mbDrawTop;
         public bool mbDrawRight;
-        public bool mbDrawBottom; 
+        public bool mbDrawBottom;
+
+        public bool mbIsVisible; 
 
         //Patch中点对应的顶点索引,在高度图中
-        public int PatchCenterXIndex
-        {
-            get
-            {
-                return mPatchXIndex * mPatchSize + mPatchSize / 2;
-            }
-        }
-
-        public int PatchCenterZIndex
-        {
-            get
-            {
-                return mPatchZIndex * mPatchSize + mPatchSize / 2;
-            }
-        }
-
-
         public int PatchCenterXInHeight
         {
             get
@@ -410,7 +404,8 @@ namespace Assets.Scripts.Common
             mPatchSize = patchSize; 
             mTriIdx = 0;
             mLOD = initLOD;
-            mDistance = 0.0f; 
+            mDistance = 0.0f;
+            mbIsVisible = true;
 
             int vertexCnt = mPatchSize * mPatchSize;
             int trianglesCnt = (mPatchSize - 1) * (mPatchSize - 1) * 6;

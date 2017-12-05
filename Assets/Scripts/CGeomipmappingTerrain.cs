@@ -826,9 +826,16 @@ namespace Assets.Scripts.Geomipmapping
 
                     patch.Reset();
 
-                    Profiler.BeginSample("Geomipmapping.RenderPatch");
-                    RenderPatch(patch, vectorScale);
-                    Profiler.EndSample(); 
+                    if( patch.mbIsVisible )
+                    {
+                        Profiler.BeginSample("Geomipmapping.RenderPatch");
+                        RenderPatch(patch, vectorScale);
+                        Profiler.EndSample();
+                    }
+
+                    Profiler.BeginSample("Geomipmapping.Present");
+                    patch.Present();
+                    Profiler.EndSample();
                 }
             }
         }
@@ -978,15 +985,13 @@ namespace Assets.Scripts.Geomipmapping
                 drawRight,
                 drawBottom
                 );
-            patch.Present(); 
-
         }
 
 
         private bool CanDrawMidVertex( int lod , CGeommPatch neighborPatch  )
         {
             bool ret = false;
-            if( null == neighborPatch || neighborPatch.mLOD <= lod )
+            if( null == neighborPatch || neighborPatch.mLOD <= lod  || !neighborPatch.mbIsVisible )
             {
                 ret = true; 
             }
@@ -1008,8 +1013,12 @@ namespace Assets.Scripts.Geomipmapping
                 return;
             }
 
+            Profiler.BeginSample("Geomipmapping.CalculateFrustumPlanes");
+            Plane[] frustumPlanes = GeometryUtility.CalculateFrustumPlanes(viewCamera);
+            Profiler.EndSample();
 
-            for(int z = 0; z < mNumPatchesPerSize; z++)
+
+            for (int z = 0; z < mNumPatchesPerSize; z++)
             {
                 for(int x = 0; x < mNumPatchesPerSize;x++)
                 {
@@ -1019,26 +1028,38 @@ namespace Assets.Scripts.Geomipmapping
                         continue; 
                     }
 
-                    float patchCenterX = patch.PatchCenterXInHeight * vectorScale.x;
-                    float patchCenterZ = patch.PatchCenterZInHeight * vectorScale.z;
-                    float patchCenterY = mHeightData.GetRawHeightValue(patch.PatchCenterXInHeight,patch.PatchCenterZInHeight) * vectorScale.y;
-
-                    patch.mDistance = Mathf.Sqrt(
-                           Mathf.Pow(viewCamera.transform.position.x - patchCenterX, 2) +
-                           Mathf.Pow(viewCamera.transform.position.y - patchCenterY, 2) +
-                           Mathf.Pow(viewCamera.transform.position.z - patchCenterZ, 2)
-                            );
-
-
-                    patch.mLOD = mMaxLOD; 
-                    for(int i = 0; i < lodLevels.Count; ++i)
+                    bool patchIsVisible = true; 
+                    if( frustumPlanes != null  )
                     {
-                        float lodDistance = lodLevels[i]; 
-                        if( patch.mDistance < lodDistance )
+                        Profiler.BeginSample("Geomipmapping.TestPlanesAABB");
+                        patchIsVisible =  GeometryUtility.TestPlanesAABB(frustumPlanes, patch.PatchBounds);
+                        Profiler.EndSample(); 
+                    }
+
+                    patch.mbIsVisible = patchIsVisible; 
+                    if( patchIsVisible )
+                    {
+                        float patchCenterX = patch.PatchCenterXInHeight * vectorScale.x;
+                        float patchCenterZ = patch.PatchCenterZInHeight * vectorScale.z;
+                        float patchCenterY = mHeightData.GetRawHeightValue(patch.PatchCenterXInHeight, patch.PatchCenterZInHeight) * vectorScale.y;
+
+                        patch.mDistance = Mathf.Sqrt(
+                               Mathf.Pow(viewCamera.transform.position.x - patchCenterX, 2) +
+                               Mathf.Pow(viewCamera.transform.position.y - patchCenterY, 2) +
+                               Mathf.Pow(viewCamera.transform.position.z - patchCenterZ, 2)
+                                );
+
+
+                        patch.mLOD = mMaxLOD;
+                        for (int i = 0; i < lodLevels.Count; ++i)
                         {
-                            patch.mLOD = i;
-                            break; 
-                        }   
+                            float lodDistance = lodLevels[i];
+                            if (patch.mDistance < lodDistance)
+                            {
+                                patch.mLOD = i;
+                                break;
+                            }
+                        }
                     }
                 }
             }
