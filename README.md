@@ -1,5 +1,5 @@
 # Geomipmapping_Unity
-Geomipmapping
+将《Focus On 3D Terrain Programming》书上的代码翻译成C# 的Geomipmapping
 
 #### 效果图
 
