@@ -819,10 +819,10 @@ namespace Assets.Scripts.Geomipmapping
                     CGeommPatch bottomNeighborPatch = GetPatch(x, z - 1);
 
                     //需要画左边中间的点
-                    patch.mbDrawLeft = CanDrawMidVertex(curPatchLOD, leftNeighborPatch);
-                    patch.mbDrawTop = CanDrawMidVertex(curPatchLOD, topNeighborPatch);
-                    patch.mbDrawRight = CanDrawMidVertex(curPatchLOD, rightNeighborPatch);
-                    patch.mbDrawBottom = CanDrawMidVertex(curPatchLOD, bottomNeighborPatch);
+                    patch.mbDrawLeftBorderMid = CanDrawMidVertex(curPatchLOD, leftNeighborPatch);
+                    patch.mbDrawTopBorderMid = CanDrawMidVertex(curPatchLOD, topNeighborPatch);
+                    patch.mbDrawRightBorderMid = CanDrawMidVertex(curPatchLOD, rightNeighborPatch);
+                    patch.mbDrawBottomBorderMid = CanDrawMidVertex(curPatchLOD, bottomNeighborPatch);
 
                     patch.Reset();
 
@@ -875,7 +875,7 @@ namespace Assets.Scripts.Geomipmapping
                     //最左边的Fan
                     if( inPatchX == iHalfSize )
                     {
-                        bDrawLeft = patch.mbDrawLeft;                           
+                        bDrawLeft = patch.mbDrawLeftBorderMid;                           
                     }
                     else
                     {
@@ -884,7 +884,7 @@ namespace Assets.Scripts.Geomipmapping
 
                     if (inPatchZ == iHalfSize)
                     {
-                        bDrawBottom = patch.mbDrawBottom;
+                        bDrawBottom = patch.mbDrawBottomBorderMid;
                     }
                     else
                     {
@@ -894,7 +894,7 @@ namespace Assets.Scripts.Geomipmapping
 
                     if (inPatchX >= (mPatchSize - 1 - iHalfSize))  //左边括号的那坨东西是代表最后一个顶点
                     {
-                        bDrawRight = patch.mbDrawRight;
+                        bDrawRight = patch.mbDrawRightBorderMid;
                     }
                     else
                     {
@@ -904,7 +904,7 @@ namespace Assets.Scripts.Geomipmapping
 
                     if (inPatchZ >= ( mPatchSize - 1 -  iHalfSize))
                     {
-                        bDrawTop = patch.mbDrawTop;
+                        bDrawTop = patch.mbDrawTopBorderMid;
                     }
                     else
                     {

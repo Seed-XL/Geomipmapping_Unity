@@ -341,10 +341,10 @@ namespace Assets.Scripts.Common
         private int mTriIdx;
         private int mPatchSize;
 
-        public bool mbDrawLeft;
-        public bool mbDrawTop;
-        public bool mbDrawRight;
-        public bool mbDrawBottom;
+        public bool mbDrawLeftBorderMid;
+        public bool mbDrawTopBorderMid;
+        public bool mbDrawRightBorderMid;
+        public bool mbDrawBottomBorderMid;
 
         public bool mbIsVisible; 
 
