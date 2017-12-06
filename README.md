@@ -7,6 +7,12 @@
 
 
 
+Gizmos for Debug
+
+![Gizmos](http://wx4.sinaimg.cn/mw690/6b98bc8agy1fm7ivkibl8j20m60c4gv7.jpg)
+
+
+
 #### 待解决的bug
 
 1. 相邻Patch的LOD层级差了2级或者以上，就会出现裂缝

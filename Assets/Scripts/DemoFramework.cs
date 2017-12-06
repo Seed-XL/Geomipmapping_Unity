@@ -18,6 +18,14 @@ public class DemoFramework : MonoBehaviour {
 
 
     public bool renderGeoMappingCLOD = false;
+    public bool isFrustumCull = true;
+
+    #region Gizmos
+    public bool drawGizmos = false;
+    public float gizmosScale = 10f;
+    public Color gizmosColor = Color.green ;
+    #endregion
+
 
     //摄像机对象
     public GameObject cameraGo;
@@ -192,6 +200,14 @@ public class DemoFramework : MonoBehaviour {
             {
                 renderGeoMappingCLOD = !renderGeoMappingCLOD; 
             }
+            if( Input.GetKeyDown(KeyCode.C))
+            {
+                isFrustumCull = !isFrustumCull; 
+            }
+            if (Input.GetKeyDown(KeyCode.G))
+            {
+                drawGizmos = !drawGizmos; 
+            }
         }
     }
 
@@ -208,7 +224,7 @@ public class DemoFramework : MonoBehaviour {
             if( renderGeoMappingCLOD )
             {
                 Profiler.BeginSample("Geomipmapping.UpdatePatch");
-                mGeoMappingTerrain.UpdatePatch(renderCamera, vertexScale, lodLevels);
+                mGeoMappingTerrain.UpdatePatch(renderCamera, vertexScale, lodLevels, isFrustumCull);
                 Profiler.EndSample();
 
                 Profiler.BeginSample("Geomipmapping.Render");
@@ -248,6 +264,17 @@ public class DemoFramework : MonoBehaviour {
         Profiler.BeginSample("DemoRender"); 
         DemoRender();
         Profiler.EndSample(); 
+    }
+
+    private void OnDrawGizmos()
+    {
+        if( mGeoMappingTerrain != null 
+            && drawGizmos )
+        {
+            Profiler.BeginSample("DrawGizmos");
+            mGeoMappingTerrain.DrawGizoms(vertexScale,gizmosScale,gizmosColor);
+            Profiler.EndSample();
+        }
     }
 
 }

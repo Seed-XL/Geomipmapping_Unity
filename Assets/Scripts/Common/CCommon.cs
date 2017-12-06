@@ -591,6 +591,30 @@ namespace Assets.Scripts.Common
 
         }// Reset 
 
+
+        public void DrawGizoms( stHeightData heightData, Vector3 vectorScale , float gizmosScale )
+        {
+            for (int z = 0; z < mPatchSize; ++z)
+            {
+                for (int x = 0; x < mPatchSize; ++x)
+                {
+                    //相对于Patch的偏移
+                    int xOffsetFromPatchCentexX = x - CenterXInPatch;
+                    int zOffsetFromPatchCentexZ = z - CenterZInPatch;
+
+                    //在高度图里面的位置
+                    int indexX = PatchCenterXInHeight + xOffsetFromPatchCentexX;
+                    int indexZ = PatchCenterZInHeight + zOffsetFromPatchCentexZ;
+                    float height = heightData.GetRawHeightValue(indexX, indexZ) * vectorScale.y;
+                    float xPos = indexX * vectorScale.x;
+                    float zPos = indexZ * vectorScale.z;
+
+                    Gizmos.DrawSphere(new Vector3(xPos, height, zPos), gizmosScale);
+                }
+            }
+        }
+
+
         public void Render( stHeightData heightData , Vector3 vectorScale )
         {
             Profiler.BeginSample("CGeomipmappin.Render.Rebuild UV and Vertex");

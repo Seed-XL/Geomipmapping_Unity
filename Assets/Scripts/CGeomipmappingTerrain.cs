@@ -75,6 +75,25 @@ namespace Assets.Scripts.Geomipmapping
         }
 
 
+        public void DrawGizoms(Vector3 vertexScale, float gizmosScale , Color gizmosColor )
+        {
+            Gizmos.color = gizmosColor;
+
+            for (int z = 0; z < mNumPatchesPerSize; ++z)
+            {
+                for (int x = 0; x < mNumPatchesPerSize; ++x)
+                {
+                    CGeommPatch patch = GetPatch(x, z);
+                    if (null == patch)
+                    {
+                        continue;
+                    }
+
+                    patch.DrawGizoms(mHeightData,vertexScale,gizmosScale); 
+                }
+            }
+        }
+
 
         #endregion
 
@@ -999,7 +1018,7 @@ namespace Assets.Scripts.Geomipmapping
         }
 
 
-        public void UpdatePatch( Camera viewCamera, Vector3 vectorScale , List<float> lodLevels )
+        public void UpdatePatch( Camera viewCamera, Vector3 vectorScale , List<float> lodLevels ,bool isFrustumCull)
         {
             if (null == viewCamera)
             {
@@ -1036,8 +1055,8 @@ namespace Assets.Scripts.Geomipmapping
                         Profiler.EndSample(); 
                     }
 
-                    patch.mbIsVisible = patchIsVisible; 
-                    if( patchIsVisible )
+                    patch.mbIsVisible = patchIsVisible || !isFrustumCull ; 
+                    if( patch.mbIsVisible )
                     {
                         float patchCenterX = patch.PatchCenterXInHeight * vectorScale.x;
                         float patchCenterZ = patch.PatchCenterZInHeight * vectorScale.z;
