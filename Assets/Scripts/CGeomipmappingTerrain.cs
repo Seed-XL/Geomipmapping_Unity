@@ -10,6 +10,17 @@ namespace Assets.Scripts.Geomipmapping
     class CGeomipmappingTerrain
     {
 
+        #region 共用的材质 
+
+
+        //使用相同的材质，可以实现dynamic branch
+        private Material mTerrainMaterial; 
+
+
+        #endregion
+
+
+
         #region   核心逻辑
 
         private int GetGlobalIndex(int x, int z)
@@ -55,7 +66,7 @@ namespace Assets.Scripts.Geomipmapping
 
 
 
-        public void Render(Vector3 vertexScale)
+        public void Normal_Render(Vector3 vertexScale)
         {
             for (int z = 0; z < mNumPatchesPerSize; ++z)
             {
@@ -67,9 +78,17 @@ namespace Assets.Scripts.Geomipmapping
                         continue;
                     }
 
-                    patch.Reset(); 
+                    Profiler.BeginSample("NormalRender.Reset"); 
+                    patch.Reset();
+                    Profiler.EndSample();
+
+                    Profiler.BeginSample("NormalRender.Render"); 
                     patch.Render(mHeightData, vertexScale);
-                    patch.Present(); 
+                    Profiler.EndSample();
+
+                    Profiler.BeginSample("NormalRender.Present"); 
+                    patch.Present();
+                    Profiler.EndSample(); 
                 }
             }    
         }
@@ -788,10 +807,26 @@ namespace Assets.Scripts.Geomipmapping
                     tLOD++; 
                 }
 
-                mMaxLOD = tLOD; 
+                mMaxLOD = tLOD;
 
-                  
-                for(int z = 0; z < mNumPatchesPerSize; z++ )
+
+                //构造材质   
+                Shader terrainShader = Shader.Find("Terrain/Geomipmapping/TerrainRender");
+                if (terrainShader != null)
+                {
+                    mTerrainMaterial = new Material(terrainShader);
+                    if (mTerrainMaterial != null)
+                    {
+                        mTerrainMaterial.SetTexture("_MainTex", colorTexture);
+                        if (detailTexture != null)
+                        {
+                            mTerrainMaterial.SetTexture("_DetailTex", detailTexture);
+                        }
+                    }
+                }
+
+
+                for (int z = 0; z < mNumPatchesPerSize; z++ )
                 {
                     for(int x = 0; x < mNumPatchesPerSize; x++)
                     {
@@ -808,8 +843,7 @@ namespace Assets.Scripts.Geomipmapping
                             mPatchSize,
                             mMaxLOD,
                             patchGo,
-                            colorTexture,
-                            detailTexture
+                            mTerrainMaterial
                             );
 
                         mGeommPatchs.Add(patch);
@@ -843,9 +877,11 @@ namespace Assets.Scripts.Geomipmapping
                     patch.mbDrawRightBorderMid = CanDrawMidVertex(curPatchLOD, rightNeighborPatch);
                     patch.mbDrawBottomBorderMid = CanDrawMidVertex(curPatchLOD, bottomNeighborPatch);
 
+                    Profiler.BeginSample("Geomipmapping.Reset");
                     patch.Reset();
+                    Profiler.EndSample();
 
-                    if( patch.mbIsVisible )
+                    if ( patch.mbIsVisible )
                     {
                         Profiler.BeginSample("Geomipmapping.RenderPatch");
                         RenderPatch(patch, vectorScale);
@@ -1062,12 +1098,13 @@ namespace Assets.Scripts.Geomipmapping
                         float patchCenterZ = patch.PatchCenterZInHeight * vectorScale.z;
                         float patchCenterY = mHeightData.GetRawHeightValue(patch.PatchCenterXInHeight, patch.PatchCenterZInHeight) * vectorScale.y;
 
+                        Profiler.BeginSample("Geomipmapping.CalcDistance"); 
                         patch.mDistance = Mathf.Sqrt(
                                Mathf.Pow(viewCamera.transform.position.x - patchCenterX, 2) +
                                Mathf.Pow(viewCamera.transform.position.y - patchCenterY, 2) +
                                Mathf.Pow(viewCamera.transform.position.z - patchCenterZ, 2)
                                 );
-
+                        Profiler.EndSample(); 
 
                         patch.mLOD = mMaxLOD;
                         for (int i = 0; i < lodLevels.Count; ++i)

@@ -300,14 +300,22 @@ namespace Assets.Scripts.Common
 
 
         private GameObject mPatchGo;
-        private Texture2D mColorTex;
-        private Texture2D mDetailTex; 
         public Mesh mMesh;
         public MeshFilter mMeshFilter; 
         public Vector3[] mVertices;
         public Vector2[] mUV;
         public Vector3[] mNormals;
         public int[] mTriangles;
+
+
+        public GameObject PatchGo
+        {
+            get
+            {
+                return mPatchGo; 
+            }
+        }
+
 
 
         public Mesh PatchMesh
@@ -392,8 +400,7 @@ namespace Assets.Scripts.Common
             int patchSize ,  //奇数
             int initLOD,
             GameObject prefab,
-            Texture2D colorTexture ,
-            Texture2D detailTexture 
+            Material mat
             )
         {
             //Patch的索引
@@ -410,8 +417,6 @@ namespace Assets.Scripts.Common
             int vertexCnt = mPatchSize * mPatchSize;
             int trianglesCnt = (mPatchSize - 1) * (mPatchSize - 1) * 6;
 
-            mColorTex = colorTexture;
-            mDetailTex = detailTexture; 
             mVertices = new Vector3[vertexCnt];
             mNormals = new Vector3[vertexCnt];
             mUV = new Vector2[vertexCnt]; ;
@@ -442,19 +447,7 @@ namespace Assets.Scripts.Common
                 MeshRenderer meshRender = mPatchGo.GetComponent<MeshRenderer>();
                 if (meshRender != null)
                 {
-                    Shader terrainShader = Shader.Find("Terrain/Geomipmapping/TerrainRender");
-                    if (terrainShader != null)
-                    {
-                        meshRender.material = new Material(terrainShader);
-                        if (meshRender.material != null)
-                        {
-                            meshRender.material.SetTexture("_MainTex", mColorTex);
-                            if (detailTexture != null)
-                            {
-                                meshRender.material.SetTexture("_DetailTex", mDetailTex);
-                            }
-                        }
-                    }
+                    meshRender.sharedMaterial = mat;  
                 }
             }
         }   
@@ -583,11 +576,6 @@ namespace Assets.Scripts.Common
                     mTriangles[i] = 0;
                 }
             }
-
-            //if( mMeshFilter != null )
-            //{
-            //    mMeshFilter.gameObject.SetActive(true); 
-            //}
 
         }// Reset 
 

@@ -106,7 +106,6 @@ public class DemoFramework : MonoBehaviour {
     //4、设置光照阴影
     void Start()
     {
-        //InitMeshData();
         InitRenderMode(); 
     
         mGeoMappingTerrain = new CGeomipmappingTerrain();
@@ -227,14 +226,14 @@ public class DemoFramework : MonoBehaviour {
                 mGeoMappingTerrain.UpdatePatch(renderCamera, vertexScale, lodLevels, isFrustumCull);
                 Profiler.EndSample();
 
-                Profiler.BeginSample("Geomipmapping.Render");
+                Profiler.BeginSample("Geomipmapping.CLOD_Render");
                 mGeoMappingTerrain.CLOD_Render(vertexScale);
                 Profiler.EndSample();
             }
             else
             {
-                Profiler.BeginSample("Normal.Render");
-                mGeoMappingTerrain.Render(vertexScale);
+                Profiler.BeginSample("Geomipmapping.Normal_Render");
+                mGeoMappingTerrain.Normal_Render(vertexScale);
                 //mGeoMappingTerrain.CombineMesh(terrainGo,detailTexture);
                 Profiler.EndSample();
             }
