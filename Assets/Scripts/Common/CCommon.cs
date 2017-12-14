@@ -1,4 +1,4 @@
-﻿using System;
+﻿using System.Collections.Generic; 
 using UnityEngine; 
 
 
@@ -577,6 +577,11 @@ namespace Assets.Scripts.Common
                 }
             }
 
+            if( mMesh != null )
+            {
+                mMesh.Clear(); 
+            }
+
         }// Reset 
 
 
@@ -658,6 +663,28 @@ namespace Assets.Scripts.Common
 
 
     }
+
+    #endregion
+
+
+    #region Block 用来管理Mesh，减少更多的DrawCall 
+    class CGeommBlock
+    {
+        private int mBlockSize; 
+
+        //key:patchIdx
+        private HashSet<int> mManagePatches;   //看看自已管理的是哪些Idx
+
+        private GameObject mBlockGo;
+        public Mesh mMesh;
+        public MeshFilter mMeshFilter;
+        public Vector3[] mVertices;
+        public Vector2[] mUV;
+        public Vector3[] mNormals;
+        public int[] mTriangles;
+        public int mTriangleIdx;   //三角形的索引 
+    }
+
 
     #endregion
 
